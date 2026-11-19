@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tropicario — Jardín Botánico Colectivo 3D</title>
+  
+  <!-- Tipografías: Fraunces (estilo orgánico, expresivo y whimsy) + Plus Jakarta Sans (interfaz editorial y limpia) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Three.js, OrbitControls y GLTFExporter desde CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Lienzo principal 3D del Tropicario -->
+  <div id="canvas-container"></div>
+
+  <!-- PANTALLA DE ENTRADA / BIENVENIDA (Editorial Minimalista) -->
+  <section id="welcome-screen" class="welcome-screen">
+    <div class="welcome-content">
+      <span class="editorial-tag">Invernadero Colectivo &middot; Espacio Virtual</span>
+      <h1 class="whimsy-title">Tropicario</h1>
+      <p class="welcome-subtext">
+        Un gran jardín botánico imaginario resguardado bajo una cúpula de cristal y luz natural suave. 
+        Explora las especies sembradas por la comunidad o entra al taller para crear tu propia planta en 3D.
+      </p>
+      <div class="welcome-actions">
+        <button id="btn-enter-garden" class="btn btn-primary">Entrar al Jardín</button>
+        <button id="btn-quick-create" class="btn btn-outline">Crear una Especie</button>
+      </div>
+    </div>
+    <div class="welcome-footer">
+      <span>Desplázate con el ratón para orbitar &middot; Clic en cualquier planta para inspeccionarla</span>
+    </div>
+  </section>
+
+  <!-- HUD SUPERIOR (Siempre visible durante la exploración) -->
+  <header id="main-header" class="main-header hidden">
+    <div class="header-left">
+      <h2 class="header-logo">Tropicario</h2>
+      <span id="plants-counter" class="plants-badge">4 especies vivas</span>
+    </div>
+
+    <div class="header-center">
+      <div class="view-controls">
+        <button class="view-btn active" data-view="entry">Entrada</button>
+        <button class="view-btn" data-view="plaza">Plaza Central</button>
+        <button class="view-btn" data-view="overview">Vista Aérea</button>
+      </div>
+
+      <div class="time-controls">
+        <button class="time-btn active" data-time="day" title="Luz Diurna Suave">☀️ Día</button>
+        <button class="time-btn" data-time="sunset" title="Ocaso Dorado">🌅 Ocaso</button>
+        <button class="time-btn" data-time="night" title="Noche Bioluminiscente">🌙 Noche</button>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <button id="btn-toggle-audio" class="btn-icon" title="Sonido Ambiente (Brisa & Cristal)">
+        <span id="audio-icon">🔈</span>
+      </button>
+      <button id="btn-open-creator" class="btn btn-primary btn-sm">
+        <span class="plus-icon">+</span> Sembrar Especie
+      </button>
+      <button id="btn-info-about" class="btn-icon" title="Acerca del Tropicario">?</button>
+    </div>
+  </header>
+
+  <!-- INSTRUCCIÓN FLOTANTE DE NAVEGACIÓN -->
+  <div id="nav-hint" class="nav-hint hidden">
+    <span>Arrastra para mirar &middot; Rueda para acercar &middot; Clic en una planta para leer su ficha</span>
+  </div>
+
+  <!-- FICHA BOTÁNICA LATERAL (Aparece al hacer clic en una planta del jardín) -->
+  <aside id="plant-card" class="plant-card hidden">
+    <button id="btn-close-card" class="card-close" aria-label="Cerrar ficha">&times;</button>
+    <div class="card-header">
+      <span class="plant-specimen-id" id="card-specimen-id">Espécimen #01</span>
+      <h3 class="plant-name" id="card-name">Lumina Calyx</h3>
+      <span class="plant-author" id="card-author">Por Sofía Navarro</span>
+    </div>
+
+    <div class="card-body">
+      <p class="plant-description" id="card-description">
+        Especie de tallo helicoidal rosado con frutos ámbar translúcidos que atrapan la luz diurna. 
+        Sus pétalos superiores respiran con la brisa del invernadero.
+      </p>
+
+      <div class="plant-traits">
+        <div class="trait-item">
+          <span class="trait-label">Morfología</span>
+          <span class="trait-val" id="card-stem-type">Espiralada</span>
+        </div>
+        <div class="trait-item">
+          <span class="trait-label">Acabado</span>
+          <span class="trait-val" id="card-material-type">Translúcido</span>
+        </div>
+        <div class="trait-item">
+          <span class="trait-label">Ubicación</span>
+          <span class="trait-val" id="card-location">Bancal Suroeste</span>
+        </div>
+      </div>
+
+      <!-- Notas de campo colaborativas -->
+      <div class="plant-notes-section">
+        <span class="trait-label">Notas de campo de visitantes</span>
+        <div id="card-notes-list" class="notes-list"></div>
+        <div class="note-input-row">
+          <input type="text" id="input-new-note" placeholder="Dejar una observación botánica...">
+          <button id="btn-add-note" class="btn btn-sm btn-outline">Añadir</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-footer">
+      <button id="btn-like-plant" class="btn-like">
+        <span class="heart-icon">&hearts;</span>
+        <span id="card-likes-count">12</span>
+      </button>
+      <button id="btn-favorite-plant" class="btn-fav">
+        <span class="star-icon">&#9733;</span> Favorita
+      </button>
+      <button id="btn-export-plant" class="btn-export" title="Descargar modelo 3D (.glb)">
+        <span>💾 .GLB</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- MODAL DEL TALLER BOTÁNICO (CREADOR 3D DE PLANTAS) -->
+  <div id="creator-modal" class="creator-modal hidden">
+    <div class="creator-backdrop"></div>
+    <div class="creator-dialog">
+      
+      <!-- Lado Izquierdo: Visor 3D orbital de la planta en construcción -->
+      <div class="creator-preview-pane">
+        <div class="preview-header">
+          <span class="preview-title">Taller Botánico &middot; Vista 360&deg;</span>
+          <span class="preview-hint">Gira con el ratón para examinar la planta</span>
+        </div>
+        <div id="creator-3d-canvas" class="creator-canvas"></div>
+      </div>
+
+      <!-- Lado Derecho: Controles editoriales de creación -->
+      <div class="creator-sidebar">
+        <div class="sidebar-top">
+          <h3>Diseñar Especie</h3>
+          <button id="btn-close-creator" class="creator-close">&times;</button>
+        </div>
+
+        <div class="creator-tabs">
+          <button class="tab-btn active" data-tab="structure">Tallo</button>
+          <button class="tab-btn" data-tab="foliage">Follaje</button>
+          <button class="tab-btn" data-tab="flower">Floración</button>
+          <button class="tab-btn" data-tab="details">Materiales</button>
+          <button class="tab-btn" data-tab="publish">Sembrar</button>
+        </div>
+
+        <div class="tab-content-area">
+          
+          <!-- Pestaña 1: Tallo y Estructura -->
+          <div class="tab-pane active" id="tab-structure">
+            <div class="form-group">
+              <label>Morfología del tallo</label>
+              <div class="choice-pills" id="choice-stem-shape">
+                <button class="pill-btn active" data-val="spiral">Voluble espiral</button>
+                <button class="pill-btn" data-val="shrub">Arbusto leñoso</button>
+                <button class="pill-btn" data-val="straight">Escapo erguido</button>
+                <button class="pill-btn" data-val="succulent">Suculento acanalado</button>
+                <button class="pill-btn" data-val="nodose">Nudoso (Bambú)</button>
+                <button class="pill-btn" data-val="sinuous">Sinuoso flexuoso</button>
+                <button class="pill-btn" data-val="rosette">Roseta basal</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Estructuras de tallo</label>
+              <div class="choice-pills" id="choice-stem-feature">
+                <button class="pill-btn active" data-val="smooth">Liso natural</button>
+                <button class="pill-btn" data-val="spines">Espinas / Acúleos</button>
+                <button class="pill-btn" data-val="tendrils">Zarcillos trepadores</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Altura: <span id="val-height">3.2m</span></label>
+              <input type="range" id="input-stem-height" min="1.5" max="4.8" step="0.1" value="3.2">
+            </div>
+
+            <div class="form-group">
+              <label>Curvatura: <span id="val-curvature">Medio</span></label>
+              <input type="range" id="input-stem-curvature" min="0.2" max="2.0" step="0.1" value="1.0">
+            </div>
+
+            <div class="form-group">
+              <label>Grosor base: <span id="val-thickness">0.12m</span></label>
+              <input type="range" id="input-stem-thickness" min="0.06" max="0.24" step="0.01" value="0.12">
+            </div>
+          </div>
+
+          <!-- Pestaña 2: Follaje y Ramas -->
+          <div class="tab-pane" id="tab-foliage">
+            <div class="form-group">
+              <label>Tipo de hoja</label>
+              <div class="choice-pills" id="choice-leaf-shape">
+                <button class="pill-btn active" data-val="ribbon">Cinta fluida</button>
+                <button class="pill-btn" data-val="oval">Oval botánica</button>
+                <button class="pill-btn" data-val="fan">Abanico escultórico</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Cantidad de hojas: <span id="val-leaves-count">6</span></label>
+              <input type="range" id="input-leaves-count" min="2" max="12" step="1" value="6">
+            </div>
+
+            <div class="form-group">
+              <label>Extensión del follaje: <span id="val-leaves-size">1.4m</span></label>
+              <input type="range" id="input-leaves-size" min="0.8" max="2.2" step="0.1" value="1.4">
+            </div>
+          </div>
+
+          <!-- Pestaña 3: Floración y Pétalos -->
+          <div class="tab-pane" id="tab-flower">
+            <div class="form-group">
+              <label>Tipo de pétalo</label>
+              <div class="choice-pills" id="choice-flower-type">
+                <button class="pill-btn active" data-val="lotus">Loto ondulado</button>
+                <button class="pill-btn" data-val="orchid">Orquídea rizada</button>
+                <button class="pill-btn" data-val="crown">Corona escultórica</button>
+                <button class="pill-btn" data-val="bell">Cáliz / Campana</button>
+                <button class="pill-btn" data-val="star">Estrella</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Capas concéntricas: <span id="val-flower-layers">2 capas</span></label>
+              <input type="range" id="input-flower-layers" min="1" max="4" step="1" value="2">
+            </div>
+
+            <div class="form-group">
+              <label>Pétalos por capa: <span id="val-petals-count">7</span></label>
+              <input type="range" id="input-petals-count" min="3" max="14" step="1" value="7">
+            </div>
+
+            <div class="form-group">
+              <label>Tamaño de la flor: <span id="val-flower-scale">1.0x</span></label>
+              <input type="range" id="input-flower-scale" min="0.6" max="1.8" step="0.1" value="1.0">
+            </div>
+
+            <div class="form-group">
+              <label>Apertura floral: <span id="val-flower-open">75%</span></label>
+              <input type="range" id="input-flower-open" min="0.2" max="1.0" step="0.05" value="0.75">
+            </div>
+
+            <div class="form-group">
+              <label>Ondulación / Rizado: <span id="val-petal-curl">Medio</span></label>
+              <input type="range" id="input-petal-curl" min="0.1" max="1.0" step="0.1" value="0.5">
+            </div>
+
+            <div class="form-group">
+              <label>Centro botánico</label>
+              <div class="choice-pills" id="choice-center-type">
+                <button class="pill-btn active" data-val="stamens">Corona de pistilos</button>
+                <button class="pill-btn" data-val="rosette">Capullo interior</button>
+                <button class="pill-btn" data-val="spadix">Espádice de lirio</button>
+                <button class="pill-btn" data-val="dewdrops">Rocío en cáliz</button>
+                <button class="pill-btn" data-val="hollow">Centro hueco</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pestaña 4: Materiales, Texturas y Color -->
+          <div class="tab-pane" id="tab-details">
+            <div class="form-group">
+              <label>Acabado táctil (100% sólido, sin transparencias)</label>
+              <div class="choice-pills" id="choice-material-finish">
+                <button class="pill-btn active" data-val="velvet">Aterciopelado (Sheen)</button>
+                <button class="pill-btn" data-val="waxy">Satinado ceroso</button>
+                <button class="pill-btn" data-val="matte">Mate celulósico</button>
+                <button class="pill-btn" data-val="pearl">Nácar botánico</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Color de flor y pétalos</label>
+              <div class="color-palette" id="palette-petals">
+                <button class="color-swatch active" style="background: #E8837C;" data-color="#E8837C" title="Rosa Coral"></button>
+                <button class="color-swatch" style="background: #F4A261;" data-color="#F4A261" title="Ámbar Cálido"></button>
+                <button class="color-swatch" style="background: #9D72FF;" data-color="#9D72FF" title="Lavanda Mística"></button>
+                <button class="color-swatch" style="background: #4EA8DE;" data-color="#4EA8DE" title="Cian Celeste"></button>
+                <button class="color-swatch" style="background: #E9D8A6;" data-color="#E9D8A6" title="Blanco Marfil"></button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Color del tallo</label>
+              <div class="color-palette" id="palette-stem">
+                <button class="color-swatch active" style="background: #2E5A44;" data-color="#2E5A44" title="Verde Botánico"></button>
+                <button class="color-swatch" style="background: #4B382A;" data-color="#4B382A" title="Tierra Seca"></button>
+                <button class="color-swatch" style="background: #5A716A;" data-color="#5A716A" title="Salvia"></button>
+                <button class="color-swatch" style="background: #C46D77;" data-color="#C46D77" title="Rosa Leñoso"></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pestaña 5: Ficha y Siembra -->
+          <div class="tab-pane" id="tab-publish">
+            <div class="form-group">
+              <label for="input-plant-name">Nombre de la especie</label>
+              <input type="text" id="input-plant-name" placeholder="Ej. Solaria Nectaris..." value="Aura Silvestre">
+            </div>
+
+            <div class="form-group">
+              <label for="input-plant-author">Tu nombre / Autor</label>
+              <input type="text" id="input-plant-author" placeholder="Ej. Juanita M." value="Invitado Botánico">
+            </div>
+
+            <div class="form-group">
+              <label for="input-plant-desc">Descripción botánica / imaginaria</label>
+              <textarea id="input-plant-desc" rows="3" placeholder="Escribe notas sobre su origen, aromas o comportamiento bajo la luz del invernadero...">Especie creada con pétalos de textura suave que irradian un ligero resplandor cálido al amanecer.</textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="select-bed">Lugar de siembra en el Tropicario</label>
+              <select id="select-bed" class="form-select">
+                <option value="bed-sw">Bancal Suroeste (Entrada izquierda)</option>
+                <option value="bed-se">Bancal Sureste (Entrada derecha)</option>
+                <option value="bed-nw">Bancal Noroeste (Fondo izquierdo)</option>
+                <option value="bed-ne">Bancal Noreste (Fondo derecho)</option>
+              </select>
+            </div>
+
+            <button id="btn-plant-in-garden" class="btn btn-primary btn-block">
+              Sembrar en el Tropicario
+            </button>
+            <button id="btn-export-creator" class="btn btn-outline btn-block" style="margin-top: 0.6rem;">
+              💾 Descargar Modelo 3D (.glb)
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL ACERCA DEL PROYECTO -->
+  <div id="about-modal" class="creator-modal hidden">
+    <div class="creator-backdrop" id="about-backdrop"></div>
+    <div class="about-card">
+      <button id="btn-close-about" class="card-close">&times;</button>
+      <h2 class="whimsy-title" style="font-size: 2.2rem; margin-bottom: 0.5rem;">Tropicario</h2>
+      <span class="editorial-tag">Jardín Virtual Colectivo &middot; Fase 1</span>
+      <p style="margin-top: 1rem; color: #4A5B53; line-height: 1.6;">
+        Este proyecto es un espacio tridimensional persistente concebido como un gran invernadero botánico de cristal.
+        Aquí conviven especies creadas colaborativamente.
+      </p>
+      <ul style="margin: 1rem 0; padding-left: 1.2rem; color: #2C3E35; line-height: 1.7; font-size: 0.95rem;">
+        <li><strong>Navega</strong> libremente por los senderos arrastrando con el ratón.</li>
+        <li><strong>Haz clic</strong> en las plantas para conocer sus fichas e historias.</li>
+        <li><strong>Siembra</strong> tu propia especie imaginaria desde el taller botánico 3D.</li>
+      </ul>
+      <button id="btn-ok-about" class="btn btn-primary btn-block">Entendido</button>
+    </div>
+  </div>
+
+  <!-- Scripts de la aplicación -->
+  <script src="plantGenerator.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
