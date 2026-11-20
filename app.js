@@ -1053,21 +1053,31 @@
     const mainHeader = document.getElementById('main-header');
     const navHint = document.getElementById('nav-hint');
 
-    document.getElementById('btn-enter-garden').addEventListener('click', () => {
-      welcomeScreen.classList.add('fade-out');
-      mainHeader.classList.remove('hidden');
-      navHint.classList.remove('hidden');
-      setTimeout(() => welcomeScreen.classList.add('hidden'), 800);
-    });
+    const btnEnter = document.getElementById('btn-enter-garden');
+    if (btnEnter) {
+      btnEnter.addEventListener('click', () => {
+        if (welcomeScreen) {
+          welcomeScreen.classList.add('fade-out');
+          setTimeout(() => welcomeScreen.classList.add('hidden'), 800);
+        }
+        if (mainHeader) mainHeader.classList.remove('hidden');
+        if (navHint) navHint.classList.remove('hidden');
+      });
+    }
 
-    document.getElementById('btn-quick-create').addEventListener('click', () => {
-      welcomeScreen.classList.add('fade-out');
-      mainHeader.classList.remove('hidden');
-      setTimeout(() => {
-        welcomeScreen.classList.add('hidden');
-        openCreatorModal();
-      }, 400);
-    });
+    const btnQuick = document.getElementById('btn-quick-create');
+    if (btnQuick) {
+      btnQuick.addEventListener('click', () => {
+        if (welcomeScreen) {
+          welcomeScreen.classList.add('fade-out');
+          setTimeout(() => {
+            welcomeScreen.classList.add('hidden');
+            openCreatorModal();
+          }, 400);
+        }
+        if (mainHeader) mainHeader.classList.remove('hidden');
+      });
+    }
 
     // 2. Vistas de Cámara Preestablecidas
     document.querySelectorAll('.view-btn').forEach(btn => {
@@ -1290,9 +1300,19 @@
   }
 
   // --- ARRANQUE DE LA APLICACIÓN ---
-  window.addEventListener('DOMContentLoaded', () => {
-    initGardenScene();
+  function startApp() {
     setupUIEventListeners();
-  });
+    try {
+      initGardenScene();
+    } catch (e) {
+      console.error("Error al inicializar escena 3D:", e);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', startApp);
+  } else {
+    startApp();
+  }
 
 })();
