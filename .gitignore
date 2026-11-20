@@ -5,6 +5,8 @@ node_modules/
 .env
 .env*.local
 
-# Archivos del sistema operativo
+# Archivos del sistema operativo y temporales
 .DS_Store
 Thumbs.db
+~$*
+*.tmp
